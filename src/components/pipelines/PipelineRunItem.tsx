@@ -1,18 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-
-interface PipelineRun {
-  id: string
-  pipeline: string
-  status: 'completed' | 'partial' | 'failed' | 'running'
-  started_at: string
-  completed_at: string | null
-  duration_ms: number | null
-  error_details: string | null
-  stats: Record<string, any> | null
-  created_at: string
-}
+import type { PipelineRun } from '@/types/pipeline'
 
 interface PipelineRunItemProps {
   run: PipelineRun
@@ -124,9 +113,12 @@ export function PipelineRunItem({ run }: PipelineRunItemProps) {
   return (
     <div className={`bg-card-bg border rounded-lg transition-all duration-200 hover:bg-card-bg/80 ${statusConfig.border}`}>
       {/* Main Card Content */}
-      <div 
-        className="p-4 cursor-pointer"
+      <button 
+        type="button"
+        className="p-4 cursor-pointer w-full text-left"
         onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
+        aria-label={`${run.pipeline} — ${statusConfig.label}. Click to ${isExpanded ? 'collapse' : 'expand'} details.`}
       >
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -154,7 +146,7 @@ export function PipelineRunItem({ run }: PipelineRunItemProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
                         d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0V7a2 2 0 00-2 2v8m0 0V7a2 2 0 002-2v0a2 2 0 002-2" />
                 </svg>
-                {formatTimestamp(run.started_at)}
+                {run.started_at ? formatTimestamp(run.started_at) : 'N/A'}
               </div>
             </div>
 
@@ -186,7 +178,7 @@ export function PipelineRunItem({ run }: PipelineRunItemProps) {
             </svg>
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Expanded Details */}
       {isExpanded && (
@@ -196,7 +188,7 @@ export function PipelineRunItem({ run }: PipelineRunItemProps) {
             <div>
               <div className="text-sm text-muted-fg mb-1">Started At</div>
               <div className="text-sm text-foreground">
-                {new Date(run.started_at).toLocaleString()}
+                {run.started_at ? new Date(run.started_at).toLocaleString() : 'N/A'}
               </div>
             </div>
             <div>

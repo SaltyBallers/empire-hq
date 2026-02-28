@@ -1,21 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { HealthSummaryCard } from './HealthSummaryCard'
 import { PipelineRunItem } from './PipelineRunItem'
+import type { PipelineRun } from '@/types/pipeline'
 
-interface PipelineRun {
-  id: string
-  pipeline: string
-  status: 'completed' | 'partial' | 'failed' | 'running'
-  started_at: string
-  completed_at: string | null
-  duration_ms: number | null
-  error_details: string | null
-  stats: Record<string, any> | null
-  created_at: string
-}
+// Stable client reference — prevents useCallback invalidation
+const supabase = createClient()
 
 export function PipelineDashboard() {
   const [runs, setRuns] = useState<PipelineRun[]>([])
@@ -24,11 +16,13 @@ export function PipelineDashboard() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
 
-  const supabase = createClient()
-
   const fetchPipelineRuns = useCallback(async () => {
     try {
-      setError(null)
+      if (runs.length > 0) {
+        // Don't clear error on refresh — keep stale data visible
+      } else {
+        setError(null)
+      }
       
       const { data, error: fetchError } = await supabase
         .from('pipeline_runs')
@@ -42,13 +36,15 @@ export function PipelineDashboard() {
 
       setRuns(data || [])
       setLastRefresh(new Date())
+      setError(null)
     } catch (err) {
       console.error('Error fetching pipeline runs:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch pipeline runs')
     } finally {
       setLoading(false)
     }
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Initial load
   useEffect(() => {
@@ -122,10 +118,10 @@ export function PipelineDashboard() {
     )
   }
 
-  if (error) {
+  if (error && runs.length === 0) {
     return (
       <div className="space-y-6">
-        {/* Error State */}
+        {/* Error State — only when no data to show */}
         <div className="bg-red-400/10 border border-red-400/20 rounded-lg p-6">
           <div className="flex items-start gap-3">
             <svg className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,6 +185,16 @@ export function PipelineDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Inline error banner when refresh fails but we have stale data */}
+      {error && runs.length > 0 && (
+        <div className="bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3 flex items-center justify-between">
+          <p className="text-red-300 text-sm">Refresh failed: {error}. Showing cached data.</p>
+          <button onClick={handleRefresh} className="text-red-400 hover:text-red-300 text-sm font-medium ml-4">
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Health Summary */}
       <HealthSummaryCard runs={runs} lastRun={lastRun} />

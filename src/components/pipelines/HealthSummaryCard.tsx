@@ -1,16 +1,7 @@
 'use client'
 
-interface PipelineRun {
-  id: string
-  pipeline: string
-  status: 'completed' | 'partial' | 'failed' | 'running'
-  started_at: string
-  completed_at: string | null
-  duration_ms: number | null
-  error_details: string | null
-  stats: Record<string, any> | null
-  created_at: string
-}
+import { useMemo } from 'react'
+import type { PipelineRun } from '@/types/pipeline'
 
 interface HealthSummaryCardProps {
   runs: PipelineRun[]
@@ -18,39 +9,39 @@ interface HealthSummaryCardProps {
 }
 
 export function HealthSummaryCard({ runs, lastRun }: HealthSummaryCardProps) {
-  // Calculate 7-day success rate
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-  
-  const recentRuns = runs.filter(run => 
-    new Date(run.started_at) >= sevenDaysAgo
-  )
-  
-  const successfulRuns = recentRuns.filter(run => 
-    run.status === 'completed'
-  ).length
-  
-  const successRate = recentRuns.length > 0 
-    ? Math.round((successfulRuns / recentRuns.length) * 100) 
-    : 0
+  const { successRate, successfulRuns, recentRuns, health } = useMemo(() => {
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    
+    const recent = runs.filter(run => 
+      run.started_at && new Date(run.started_at) >= sevenDaysAgo
+    )
+    
+    const successful = recent.filter(run => 
+      run.status === 'completed'
+    ).length
+    
+    const rate = recent.length > 0 
+      ? Math.round((successful / recent.length) * 100) 
+      : 0
 
-  // Determine overall health status
-  const getHealthStatus = () => {
-    if (successRate >= 90) return { status: 'healthy', color: 'text-green-400', bg: 'bg-green-400/10' }
-    if (successRate >= 70) return { status: 'warning', color: 'text-yellow-400', bg: 'bg-yellow-400/10' }
-    return { status: 'critical', color: 'text-red-400', bg: 'bg-red-400/10' }
-  }
+    const healthStatus = rate >= 90
+      ? { status: 'healthy' as const, color: 'text-green-400', bg: 'bg-green-400/10' }
+      : rate >= 70
+      ? { status: 'warning' as const, color: 'text-yellow-400', bg: 'bg-yellow-400/10' }
+      : { status: 'critical' as const, color: 'text-red-400', bg: 'bg-red-400/10' }
 
-  const health = getHealthStatus()
+    return { successRate: rate, successfulRuns: successful, recentRuns: recent, health: healthStatus }
+  }, [runs])
   
   // Last healthy run
   const lastHealthyRun = runs.find(run => run.status === 'completed')
   const timeSinceLastHealthy = lastHealthyRun 
-    ? getTimeAgo(new Date(lastHealthyRun.completed_at || lastHealthyRun.started_at))
+    ? getTimeAgo(new Date(lastHealthyRun.completed_at ?? lastHealthyRun.started_at ?? lastHealthyRun.created_at))
     : 'Never'
 
   // Last run time
-  const lastRunTime = lastRun 
+  const lastRunTime = lastRun?.started_at
     ? getTimeAgo(new Date(lastRun.started_at))
     : 'No runs found'
 
@@ -127,8 +118,11 @@ export function HealthSummaryCard({ runs, lastRun }: HealthSummaryCardProps) {
 function getTimeAgo(date: Date): string {
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
+  
+  if (diff < 60000) return 'Just now'
+  
   const minutes = Math.floor(diff / (1000 * 60))
+  const hours = Math.floor(diff / (1000 * 60 * 60))
 
   if (hours < 1) {
     return `${minutes}m ago`
