@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { usePathname } from 'next/navigation'
+import { useLogout } from '@/hooks/useLogout'
 
 interface NavItem {
   name: string
@@ -57,21 +56,7 @@ const navItems: NavItem[] = [
 
 export function DesktopSidebar() {
   const pathname = usePathname()
-  const router = useRouter()
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-
-  const handleLogout = async () => {
-    try {
-      setIsLoggingOut(true)
-      const supabase = createClient()
-      await supabase.auth.signOut()
-      router.push('/login')
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
+  const { handleLogout, isLoggingOut } = useLogout()
 
   return (
     <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-card-bg border-r border-border">
@@ -164,21 +149,7 @@ export function MobileBottomTabs() {
 }
 
 export function MobileHeader() {
-  const router = useRouter()
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-
-  const handleLogout = async () => {
-    try {
-      setIsLoggingOut(true)
-      const supabase = createClient()
-      await supabase.auth.signOut()
-      router.push('/login')
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
+  const { handleLogout, isLoggingOut } = useLogout()
 
   return (
     <div className="lg:hidden flex items-center justify-between h-16 px-4 bg-card-bg border-b border-border">

@@ -26,6 +26,15 @@ export async function middleware(request: NextRequest) {
       return Response.redirect(redirectUrl)
     }
 
+    // Authorization: only allowed emails can access admin dashboard
+    const ALLOWED_EMAILS = ['surfballers@gmail.com']
+    if (user && !ALLOWED_EMAILS.includes(user.email ?? '')) {
+      // Sign them out and redirect to login with error
+      await supabase.auth.signOut()
+      const redirectUrl = new URL('/login?error=unauthorized', request.url)
+      return Response.redirect(redirectUrl)
+    }
+
     // If user exists and on login page, redirect to dashboard
     if (user && pathname === '/login') {
       const redirectUrl = new URL('/', request.url)

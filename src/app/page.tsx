@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { AppLayout } from '@/components/AppLayout'
 
 interface DashboardCard {
@@ -107,9 +108,10 @@ export default function DashboardPage() {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dashboardCards.map((card) => (
-            <div
+            <Link
               key={card.title}
-              className="bg-card-bg border border-border rounded-lg p-6 hover:border-primary/50 transition-colors cursor-pointer group"
+              href={card.href}
+              className="bg-card-bg border border-border rounded-lg p-6 hover:border-primary/50 transition-colors cursor-pointer group block"
             >
               <div className="flex items-start justify-between mb-4">
                 {card.icon}
@@ -127,7 +129,7 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-fg leading-relaxed">
                 {card.description}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
 
