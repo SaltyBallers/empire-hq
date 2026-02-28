@@ -151,7 +151,7 @@ export function PipelineDashboard() {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={handleRefresh}
@@ -175,7 +175,7 @@ export function PipelineDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end sm:justify-start gap-2">
           <button
             onClick={handleAutoRefreshToggle}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -185,7 +185,7 @@ export function PipelineDashboard() {
             }`}
           >
             <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-green-400' : 'bg-muted'}`}></div>
-            Auto-refresh {autoRefresh ? 'ON' : 'OFF'}
+            <span className="hidden sm:inline">Auto-refresh</span> {autoRefresh ? 'ON' : 'OFF'}
           </button>
         </div>
       </div>

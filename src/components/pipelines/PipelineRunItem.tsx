@@ -106,7 +106,7 @@ export function PipelineRunItem({ run }: PipelineRunItemProps) {
     }
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {stats.map(([key, value]) => (
           <div key={key} className="bg-background/50 rounded-lg p-3">
             <div className="text-sm text-muted-fg">
@@ -141,7 +141,7 @@ export function PipelineRunItem({ run }: PipelineRunItemProps) {
             </div>
 
             {/* Meta Information */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-fg">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-fg">
               <div className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 

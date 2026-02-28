@@ -70,7 +70,7 @@ export function HealthSummaryCard({ runs, lastRun }: HealthSummaryCardProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
         {/* Success Rate */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
