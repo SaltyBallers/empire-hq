@@ -1,0 +1,93 @@
+{
+  "cardNumber": 29,
+  "trelloCardId": "697b5f71410b8b12c4f22236",
+  "title": "Trello Automation - Webhooks/Push Investigation",
+  "branchName": "feature/29-trello-webhooks",
+  "goal": "Investigate and implement automated triggers for Trello card state changes via Xano webhook receiver",
+  "userStories": [
+    {
+      "id": "US-01",
+      "story": "As Zak, I want to be notified when a card moves to In Progress so I can start working immediately",
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-02", 
+      "story": "As Zak, I want to be notified when a card moves from Review back to In Progress for iteration",
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-03",
+      "story": "As Bill, I want cards auto-processed based on state changes for hands-off workflow",
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    }
+  ],
+  "acceptanceCriteria": [
+    "Technical feasibility documented",
+    "Xano webhook receiver endpoint created",
+    "Trello webhook registered and verified",
+    "Notifications delivered on card moves to In Progress",
+    "Security considerations addressed"
+  ],
+  "outOfScope": [
+    "Full implementation of all automation scenarios (this is MVP/proof of concept)",
+    "Changes to existing sync scripts",
+    "Exposing Clawdbot webhook publicly"
+  ],
+  "plan": [
+    {
+      "step": 1,
+      "task": "Document Trello webhook capabilities",
+      "status": "complete",
+      "notes": "Webhooks confirmed: POST callbacks, HMAC-SHA1 signing, retry logic"
+    },
+    {
+      "step": 2,
+      "task": "Design Xano receiver endpoint",
+      "status": "complete",
+      "notes": "Full code spec in card description"
+    },
+    {
+      "step": 3,
+      "task": "Design Telegram notification integration",
+      "status": "complete",
+      "notes": "Bot token + sendMessage API"
+    },
+    {
+      "step": 4,
+      "task": "Document security considerations",
+      "status": "complete",
+      "notes": "HMAC-SHA1 verification recommended"
+    },
+    {
+      "step": 5,
+      "task": "Write recommendation",
+      "status": "complete",
+      "notes": "Xano + Telegram = simplest path; no Clawdbot webhook exposure needed"
+    }
+  ],
+  "implementationSteps": [
+    "Deploy Xano endpoint code from spec",
+    "Set TELEGRAM_BOT_TOKEN env var in Xano",
+    "Register Trello webhook via API",
+    "Test with card move"
+  ],
+  "technicalNotes": {
+    "trelloWebhookPayload": {
+      "action": "Contains action type (updateCard) and data (listBefore, listAfter)",
+      "model": "The board/card being watched",
+      "webhook": "Webhook metadata"
+    },
+    "relevantActionTypes": ["updateCard"],
+    "filterLogic": "Check action.data.listAfter.name contains 'In Progress'",
+    "telegramBotApi": "POST https://api.telegram.org/bot<token>/sendMessage",
+    "xanoEndpoint": "POST /trello-webhook on surfballers API"
+  },
+  "createdAt": "2026-01-29T13:54:00Z",
+  "updatedAt": "2026-01-29T13:54:00Z"
+}

@@ -1,0 +1,63 @@
+{
+  "prdVersion": "1.0",
+  "trelloCardNumber": 35,
+  "title": "Build Comprehensive Xano Platform Skill",
+  "branchName": "feature/35-xano-platform-skill",
+  "goal": "Build a comprehensive Xano platform skill that teaches Zak how to USE Xano — write XanoScript, create tables/functions/APIs/addons, use the Metadata API, etc. This is PLATFORM knowledge, not app-specific.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Write XanoScript Fluently",
+      "description": "Complete XanoScript language reference for writing functions, APIs, and queries without guessing syntax",
+      "priority": 1,
+      "passes": true,
+      "notes": "COMPLETE: xanoscript-language.md (types, filters, operators, expressions) + xanoscript-statements.md (all db.*, api.*, var.*, etc.)"
+    },
+    {
+      "id": "US-002",
+      "title": "Create Any Xano Component",
+      "description": "Patterns for tables, functions, APIs, addons, middleware, tasks, triggers",
+      "priority": 2,
+      "passes": true,
+      "notes": "COMPLETE: All component references - tables.md, functions.md, apis.md, addons.md, tasks.md, middleware.md, triggers.md, mcp-agents.md"
+    },
+    {
+      "id": "US-003",
+      "title": "Use Metadata API Fully",
+      "description": "Complete Metadata API reference (not just push endpoints)",
+      "priority": 3,
+      "passes": true,
+      "notes": "COMPLETE: metadata-api.md covers workspace, API groups, APIs, functions, tables, addons, tasks, branches"
+    },
+    {
+      "id": "US-004",
+      "title": "Consult Docs When Stuck",
+      "description": "A process to consult Xano docs when skill does not cover something",
+      "priority": 4,
+      "passes": true,
+      "notes": "COMPLETE: 'Exit Hatch' section in SKILL.md points to docs.xano.com"
+    }
+  ],
+  "phase2Completion": {
+    "authentication": "COMPLETE: authentication.md - JWE tokens, login/signup flows, security functions",
+    "mcpAgents": "COMPLETE: mcp-agents.md - MCP Builder, AI Agents, tools, structured outputs",
+    "testing": "COMPLETE: testing.md - Unit tests, workflow tests, test suites, mocking",
+    "errorHandling": "COVERED in best-practices.md and xanoscript-statements.md (try/catch)",
+    "totalFiles": 14,
+    "totalLines": 4422
+  },
+  "acceptanceCriteria": [
+    { "id": "AC-1", "description": "Skill contains complete XanoScript language reference", "passes": true },
+    { "id": "AC-2", "description": "Skill covers tables, functions, APIs, addons creation", "passes": true },
+    { "id": "AC-3", "description": "Skill has comprehensive Metadata API reference", "passes": true },
+    { "id": "AC-4", "description": "Skill is PLATFORM-generic (no Surfballers-specific content)", "passes": true },
+    { "id": "AC-5", "description": "Zak knows to consult Xano docs when skill does not cover something", "passes": true }
+  ],
+  "outOfScope": [
+    "Surfballers-specific tables, functions, APIs (that is in memory/surfballers-backend.md)",
+    "Frontend integration (separate concern)"
+  ],
+  "createdAt": "2025-07-13T12:00:00Z",
+  "completedAt": "2026-01-30T14:47:00Z",
+  "status": "complete"
+}

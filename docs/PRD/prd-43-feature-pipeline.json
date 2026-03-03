@@ -1,0 +1,73 @@
+{
+  "project": "Surfballers",
+  "trelloCardId": "6980e0197631a33362c7d80f",
+  "trelloCardNumber": 43,
+  "branchName": "feature/43-feature-pipeline",
+  "title": "Feature Pipeline Skill",
+  "description": "Enforces the development process from Inbox to Done — ensuring PRD creation, stage gates, and review approvals are never skipped.",
+  "status": "in_progress",
+  "createdAt": "2026-02-02T19:45:00Z",
+  "updatedAt": "2026-02-02T19:45:00Z",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Follow feature pipeline precisely",
+      "description": "As Bill, I want Zak to follow the feature pipeline precisely so that no steps are skipped",
+      "acceptanceCriteria": [
+        "SKILL.md documents all behavioral modes",
+        "Explore & Plan mode clearly defines DO and DO NOT actions",
+        "Execute mode clearly defines DO and DO NOT actions",
+        "Await Approval mode clearly defines DO and DO NOT actions",
+        "Deploy & Close mode clearly defines DO and DO NOT actions"
+      ],
+      "priority": 1,
+      "estimatedEffort": "medium",
+      "passes": true,
+      "completedAt": "2026-02-02T19:46:00Z",
+      "notes": "SKILL.md created with all 5 modes documented including explicit DO/DO NOT lists"
+    },
+    {
+      "id": "US-002",
+      "title": "PRD JSON for every In Progress card",
+      "description": "As Bill, I want a PRD JSON created for every In Progress card so we have structured data for tracking",
+      "acceptanceCriteria": [
+        "PRD template JSON exists",
+        "create-prd.sh script generates PRD from Trello card",
+        "HEARTBEAT validates PRD exists for In Progress cards"
+      ],
+      "priority": 2,
+      "estimatedEffort": "medium",
+      "passes": true,
+      "completedAt": "2026-02-02T19:46:00Z",
+      "notes": "Template at templates/prd-template.json, create-prd.sh script working, heartbeat-validate.sh checks for missing PRDs"
+    },
+    {
+      "id": "US-003",
+      "title": "Enforce stage gates",
+      "description": "As Bill, I want explicit gates enforced so code is not merged prematurely",
+      "acceptanceCriteria": [
+        "check-gate.sh validates stage transitions",
+        "pre-merge-check.sh blocks merge without Approved label",
+        "heartbeat-validate.sh runs during heartbeat polls",
+        "pipeline-config.json configures Xano ON by default"
+      ],
+      "priority": 3,
+      "estimatedEffort": "large",
+      "passes": true,
+      "completedAt": "2026-02-02T19:46:00Z",
+      "notes": "All scripts created and executable. Config has useXano: true"
+    }
+  ],
+  "technicalNotes": [
+    "This skill will be located at ~/clawd/skills/feature-pipeline/",
+    "Integrates with existing xano-ci-cd skill",
+    "Modular config allows toggling Xano on/off"
+  ],
+  "dependencies": [
+    "xano-ci-cd skill (already exists)"
+  ],
+  "outOfScope": [
+    "QA Agent (Phase 2)",
+    "Venture-specific customizations"
+  ]
+}
