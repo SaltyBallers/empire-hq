@@ -1,8 +1,83 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useLogout } from '@/hooks/useLogout'
+
+const apps = [
+  { name: 'Empire HQ', href: '/', icon: '🏝️', current: true },
+  { name: 'vibeyap', href: 'https://vibeyap.com', icon: '🔖', external: true },
+  { name: 'Surfballers', href: '#', icon: '🏈', disabled: true },
+  { name: 'Gig App', href: '#', icon: '🎸', disabled: true },
+  { name: 'Roadtrip Moments', href: '#', icon: '📸', disabled: true },
+]
+
+function AppSelector() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const current = apps.find(a => a.current) || apps[0]
+
+  return (
+    <div className="p-4 border-b border-border" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full p-2 bg-background rounded-md hover:bg-background/80 transition-colors"
+      >
+        <span className="text-sm font-medium">{current.icon} {current.name}</span>
+        <svg className={`w-4 h-4 text-muted-fg transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="mt-1 bg-card-bg border border-border rounded-md shadow-lg overflow-hidden">
+          {apps.map((app) => (
+            app.disabled ? (
+              <div key={app.name} className="flex items-center gap-2 px-3 py-2 text-sm text-muted-fg/50 cursor-not-allowed">
+                <span>{app.icon}</span>
+                <span>{app.name}</span>
+                <span className="ml-auto text-xs">Soon</span>
+              </div>
+            ) : app.external ? (
+              <a
+                key={app.name}
+                href={app.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background transition-colors"
+              >
+                <span>{app.icon}</span>
+                <span>{app.name}</span>
+                <svg className="ml-auto w-3 h-3 text-muted-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            ) : (
+              <div
+                key={app.name}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary bg-primary/5"
+              >
+                <span>{app.icon}</span>
+                <span>{app.name}</span>
+                <span className="ml-auto text-xs">✓</span>
+              </div>
+            )
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface NavItem {
   name: string
@@ -86,14 +161,7 @@ export function DesktopSidebar() {
       </div>
 
       {/* App Selector */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between p-2 bg-background rounded-md">
-          <span className="text-sm font-medium">vibeyap</span>
-          <svg className="w-4 h-4 text-muted-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-      </div>
+      <AppSelector />
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
