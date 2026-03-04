@@ -3,34 +3,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { AdminApiCost, CostSummary, ProviderStats, DailyCost } from '@/types/costs'
+import { ALL_PROVIDERS, MONTHLY_BUDGETS } from '@/types/costs'
 import { CostSummaryCards } from './CostSummaryCards'
 import { MonthlyChart } from './MonthlyChart'
 import { ProviderDetailCard } from './ProviderDetailCard'
+import { ManualCostEntry } from './ManualCostEntry'
 
 const supabase = createClient()
-
-const PROVIDERS = ['apify', 'openai', 'vercel', 'supabase'] as const
-
-// Monthly budget limits (in USD)
-const MONTHLY_BUDGETS: Record<string, number> = {
-  apify: 100,
-  openai: 200,
-  vercel: 50,
-  supabase: 75
-}
 
 export function CostsDashboard() {
   const [costs, setCosts] = useState<AdminApiCost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showManualEntry, setShowManualEntry] = useState(false)
 
   const fetchCosts = useCallback(async () => {
     try {
       setLoading(true)
       
-      // Get costs for current month and last month
       const now = new Date()
-      const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
       
       const { data, error: fetchError } = await supabase
@@ -45,16 +36,25 @@ export function CostsDashboard() {
     } catch (err) {
       console.error('Error fetching costs:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch costs')
-      // Preserve stale data on error
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Fetch costs on mount
   useEffect(() => {
     fetchCosts()
   }, [fetchCosts])
+
+  // Get unique providers that have data
+  const activeProviders = useMemo(() => {
+    const providersWithData = new Set(costs.map(c => c.provider))
+    // Show all known providers, but sort active ones first
+    return ALL_PROVIDERS.slice().sort((a, b) => {
+      const aActive = providersWithData.has(a) ? 0 : 1
+      const bActive = providersWithData.has(b) ? 0 : 1
+      return aActive - bActive
+    })
+  }, [costs])
 
   const { costSummary, dailyCosts, providerStats } = useMemo(() => {
     const now = new Date()
@@ -62,25 +62,22 @@ export function CostsDashboard() {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
     
-    // Separate this month vs last month costs
-    const thisMonthCosts = costs.filter(cost => 
-      new Date(cost.date) >= startOfThisMonth
-    )
+    const thisMonthCosts = costs.filter(cost => new Date(cost.date) >= startOfThisMonth)
     const lastMonthCosts = costs.filter(cost => 
       new Date(cost.date) >= startOfLastMonth && new Date(cost.date) <= endOfLastMonth
     )
     
-    // Calculate cost summary
     const totalThisMonth = thisMonthCosts.reduce((sum, cost) => sum + Number(cost.value), 0)
     const totalLastMonth = lastMonthCosts.reduce((sum, cost) => sum + Number(cost.value), 0)
     const deltaPercent = totalLastMonth > 0 
       ? ((totalThisMonth - totalLastMonth) / totalLastMonth) * 100 
       : 0
     
-    const providerBreakdown = PROVIDERS.reduce((acc, provider) => {
-      acc[provider] = thisMonthCosts
+    const providerBreakdown = activeProviders.reduce((acc, provider) => {
+      const amount = thisMonthCosts
         .filter(cost => cost.provider === provider)
         .reduce((sum, cost) => sum + Number(cost.value), 0)
+      if (amount > 0) acc[provider] = amount
       return acc
     }, {} as Record<string, number>)
 
@@ -91,14 +88,11 @@ export function CostsDashboard() {
       providerBreakdown
     }
     
-    // Calculate daily costs for chart
+    // Daily costs for chart
     const dailyCostMap = new Map<string, Record<string, number>>()
-    
     thisMonthCosts.forEach(cost => {
       const date = cost.date
-      if (!dailyCostMap.has(date)) {
-        dailyCostMap.set(date, {})
-      }
+      if (!dailyCostMap.has(date)) dailyCostMap.set(date, {})
       const dayData = dailyCostMap.get(date)!
       dayData[cost.provider] = (dayData[cost.provider] || 0) + Number(cost.value)
     })
@@ -111,8 +105,8 @@ export function CostsDashboard() {
       }))
       .sort((a, b) => a.date.localeCompare(b.date))
     
-    // Calculate provider stats
-    const providerStats: ProviderStats[] = PROVIDERS.map(provider => {
+    // Provider stats
+    const providerStats: ProviderStats[] = activeProviders.map(provider => {
       const providerCosts = thisMonthCosts.filter(cost => cost.provider === provider)
       const totalSpend = providerCosts.reduce((sum, cost) => sum + Number(cost.value), 0)
       const apiCalls = providerCosts.length
@@ -121,17 +115,11 @@ export function CostsDashboard() {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )[0]
       
-      return {
-        provider,
-        totalSpend,
-        apiCalls,
-        averageCostPerCall,
-        lastEntry
-      }
+      return { provider, totalSpend, apiCalls, averageCostPerCall, lastEntry }
     })
     
     return { costSummary: summary, dailyCosts, providerStats }
-  }, [costs])
+  }, [costs, activeProviders])
 
   if (loading) {
     return (
@@ -145,32 +133,6 @@ export function CostsDashboard() {
             </div>
           ))}
         </div>
-        <div className="bg-card-bg border border-border rounded-lg p-6 animate-pulse">
-          <div className="h-6 bg-border rounded w-32 mb-6"></div>
-          <div className="h-40 bg-border rounded"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (costs.length === 0) {
-    return (
-      <div className="bg-card-bg border border-border rounded-lg p-12 text-center">
-        <div className="max-w-md mx-auto">
-          <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-            </svg>
-          </div>
-          
-          <h2 className="text-2xl font-bold text-foreground mb-4">No Cost Data</h2>
-          
-          <p className="text-muted-fg mb-6">
-            No API costs have been logged yet. Once your services start generating costs,
-            they'll appear here automatically.
-          </p>
-        </div>
       </div>
     )
   }
@@ -183,18 +145,38 @@ export function CostsDashboard() {
         </div>
       )}
       
+      {/* Action bar */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowManualEntry(!showManualEntry)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Log Cost
+        </button>
+      </div>
+
+      {showManualEntry && (
+        <ManualCostEntry onSuccess={() => { setShowManualEntry(false); fetchCosts() }} onCancel={() => setShowManualEntry(false)} />
+      )}
+      
       <CostSummaryCards summary={costSummary} budgets={MONTHLY_BUDGETS} />
       
       <MonthlyChart dailyCosts={dailyCosts} />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {providerStats.map(stats => (
-          <ProviderDetailCard 
-            key={stats.provider} 
-            stats={stats} 
-            budget={MONTHLY_BUDGETS[stats.provider] || 100}
-          />
-        ))}
+      <div>
+        <h2 className="text-xl font-semibold text-foreground mb-4">Provider Breakdown</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {providerStats.map(stats => (
+            <ProviderDetailCard 
+              key={stats.provider} 
+              stats={stats} 
+              budget={MONTHLY_BUDGETS[stats.provider] || 100}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -1,11 +1,18 @@
+export const ALL_PROVIDERS = [
+  'anthropic', 'openai', 'brave', 'exa', 'perplexity',
+  'moonshot', 'gemini', 'lovable', 'vercel', 'supabase', 'apify'
+] as const
+
+export type Provider = typeof ALL_PROVIDERS[number]
+
 export interface AdminApiCost {
   id: string
   app: string
-  provider: 'apify' | 'openai' | 'vercel' | 'supabase'
+  provider: string
   date: string
   metric: string
   value: number
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   created_at: string
 }
 
@@ -36,10 +43,32 @@ export interface BudgetStatus {
   isOverBudget: boolean
 }
 
-// Monthly budget limits (can be moved to config)
+// Monthly budget limits per provider (USD)
 export const MONTHLY_BUDGETS: Record<string, number> = {
-  apify: 100,
+  anthropic: 500,
   openai: 200,
+  brave: 25,
+  exa: 50,
+  perplexity: 50,
+  moonshot: 25,
+  gemini: 50,
+  lovable: 50,
   vercel: 50,
-  supabase: 75
+  supabase: 75,
+  apify: 100
+}
+
+// Provider display config
+export const PROVIDER_CONFIG: Record<string, { label: string; color: string; hasApi: boolean }> = {
+  anthropic: { label: 'Anthropic', color: '#d97706', hasApi: true },
+  openai: { label: 'OpenAI', color: '#10b981', hasApi: true },
+  brave: { label: 'Brave', color: '#ef4444', hasApi: false },
+  exa: { label: 'Exa', color: '#6366f1', hasApi: false },
+  perplexity: { label: 'Perplexity', color: '#06b6d4', hasApi: false },
+  moonshot: { label: 'Kimi/Moonshot', color: '#ec4899', hasApi: false },
+  gemini: { label: 'Gemini', color: '#3b82f6', hasApi: false },
+  lovable: { label: 'Lovable', color: '#f43f5e', hasApi: false },
+  vercel: { label: 'Vercel', color: '#8b5cf6', hasApi: true },
+  supabase: { label: 'Supabase', color: '#f59e0b', hasApi: true },
+  apify: { label: 'Apify', color: '#0ea5e9', hasApi: true }
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { ProviderStats } from '@/types/costs'
+import { PROVIDER_CONFIG } from '@/types/costs'
 
 interface ProviderDetailCardProps {
   stats: ProviderStats
@@ -49,7 +50,7 @@ export function ProviderDetailCard({ stats, budget }: ProviderDetailCardProps) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${colors.text.replace('text-', 'bg-')}`}></div>
-            <h3 className="text-lg font-semibold text-foreground capitalize">{stats.provider}</h3>
+            <h3 className="text-lg font-semibold text-foreground">{PROVIDER_CONFIG[stats.provider]?.label || stats.provider}</h3>
           </div>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
