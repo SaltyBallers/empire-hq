@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 // --- Supabase admin client ---
 
@@ -14,39 +14,61 @@ function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
+// --- Auth helper ---
+
+function verifyCronSecret(request: NextRequest): boolean {
+  const authHeader = request.headers.get('authorization')
+  const secret = process.env.CRON_SECRET
+  if (!secret) return false
+  return authHeader === `Bearer ${secret}`
+}
+
+// --- Metadata sanitizers ---
+
+function sanitizeMoonshotMetadata(body: Record<string, unknown>): Record<string, unknown> {
+  const data = body.data as Record<string, unknown> | undefined
+  if (!data) return {}
+  return {
+    available_balance: data.available_balance,
+    voucher_balance: data.voucher_balance,
+    cash_balance: data.cash_balance,
+  }
+}
+
+function sanitizeVercelMetadata(charges: { BilledCost?: number }[], period: { from: string; to: string }): Record<string, unknown> {
+  const total = charges.reduce((sum, c) => sum + (c.BilledCost ?? 0), 0)
+  return {
+    total_charges: total,
+    line_count: charges.length,
+    period,
+  }
+}
+
+function sanitizeAnthropicMetadata(body: Record<string, unknown>): Record<string, unknown> {
+  return {
+    total_cost: body.total_cost,
+    model_breakdown: body.model_breakdown,
+  }
+}
+
 // --- Upsert helper ---
 
 async function upsertCost(
+  supabase: ReturnType<typeof getSupabase>,
   provider: string,
   metric: string,
   value: number,
   metadata: Record<string, unknown> | null = null
 ) {
-  const supabase = getSupabase()
   const date = today()
 
-  // Check for existing row
-  const { data: existing } = await supabase
+  const { error } = await supabase
     .from('admin_api_costs')
-    .select('id')
-    .eq('app', 'empire')
-    .eq('provider', provider)
-    .eq('date', date)
-    .eq('metric', metric)
-    .maybeSingle()
-
-  if (existing) {
-    const { error } = await supabase
-      .from('admin_api_costs')
-      .update({ value, metadata })
-      .eq('id', existing.id)
-    if (error) throw error
-  } else {
-    const { error } = await supabase
-      .from('admin_api_costs')
-      .insert({ app: 'empire', provider, date, metric, value, metadata })
-    if (error) throw error
-  }
+    .upsert(
+      { app: 'empire', provider, date, metric, value, metadata },
+      { onConflict: 'app,provider,date,metric' }
+    )
+  if (error) throw new Error(error.message)
 }
 
 // --- Provider functions ---
@@ -58,7 +80,7 @@ type SyncResult = {
   error?: string
 }
 
-async function syncMoonshot(): Promise<SyncResult> {
+async function syncMoonshot(supabase: ReturnType<typeof getSupabase>): Promise<SyncResult> {
   const key = process.env.MOONSHOT_API_KEY
   if (!key) return { provider: 'moonshot', status: 'skipped', error: 'MOONSHOT_API_KEY not set' }
 
@@ -70,15 +92,14 @@ async function syncMoonshot(): Promise<SyncResult> {
   const body = await res.json()
   const balance = body.data.available_balance
 
-  await upsertCost('moonshot', 'balance', balance, body)
+  await upsertCost(supabase, 'moonshot', 'balance', balance, sanitizeMoonshotMetadata(body))
   return { provider: 'moonshot', status: 'ok', balance }
 }
 
-async function syncVercel(): Promise<SyncResult> {
+async function syncVercel(supabase: ReturnType<typeof getSupabase>): Promise<SyncResult> {
   const token = process.env.VERCEL_API_TOKEN
   if (!token) return { provider: 'vercel', status: 'skipped', error: 'VERCEL_API_TOKEN not set' }
 
-  // Vercel billing/charges requires from/to as ISO 8601 dates
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const endAt = now.toISOString()
@@ -89,7 +110,6 @@ async function syncVercel(): Promise<SyncResult> {
   )
   if (!res.ok) throw new Error(`Vercel API ${res.status}: ${await res.text()}`)
 
-  // Response is NDJSON (one JSON object per line)
   const text = await res.text()
   const lines = text.trim().split('\n').filter(Boolean)
   const charges = lines.map((line) => JSON.parse(line))
@@ -98,12 +118,12 @@ async function syncVercel(): Promise<SyncResult> {
     0
   )
 
-  const metadata = { charge_count: charges.length, period: { from: monthStart, to: endAt } }
-  await upsertCost('vercel', 'current_period_charges', total, metadata)
+  const period = { from: monthStart, to: endAt }
+  await upsertCost(supabase, 'vercel', 'current_period_charges', total, sanitizeVercelMetadata(charges, period))
   return { provider: 'vercel', status: 'ok', balance: total }
 }
 
-async function syncAnthropic(): Promise<SyncResult> {
+async function syncAnthropic(supabase: ReturnType<typeof getSupabase>): Promise<SyncResult> {
   const key = process.env.ANTHROPIC_ADMIN_API_KEY
   if (!key) {
     console.warn('Anthropic Admin API key not configured — skipping')
@@ -128,22 +148,32 @@ async function syncAnthropic(): Promise<SyncResult> {
   const body = await res.json()
   const total = body.total_cost ?? 0
 
-  await upsertCost('anthropic', 'monthly_cost', total, body)
+  await upsertCost(supabase, 'anthropic', 'monthly_cost', total, sanitizeAnthropicMetadata(body))
   return { provider: 'anthropic', status: 'ok', balance: total }
 }
 
 // --- Route handlers ---
 
-const providers = [syncMoonshot, syncVercel, syncAnthropic]
+export async function POST(request: NextRequest) {
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-export async function POST() {
+  const supabase = getSupabase()
+
+  const syncFns: { name: string; fn: () => Promise<SyncResult> }[] = [
+    { name: 'moonshot', fn: () => syncMoonshot(supabase) },
+    { name: 'vercel', fn: () => syncVercel(supabase) },
+    { name: 'anthropic', fn: () => syncAnthropic(supabase) },
+  ]
+
   const results: SyncResult[] = await Promise.all(
-    providers.map(async (fn) => {
+    syncFns.map(async ({ name, fn }) => {
       try {
         return await fn()
       } catch (err) {
         return {
-          provider: fn.name.replace('sync', '').toLowerCase(),
+          provider: name,
           status: 'error' as const,
           error: err instanceof Error ? err.message : String(err),
         }
