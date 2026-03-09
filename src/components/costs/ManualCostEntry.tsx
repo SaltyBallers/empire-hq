@@ -92,6 +92,7 @@ export function ManualCostEntry({ onSuccess, onCancel }: ManualCostEntryProps) {
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm"
           >
             <option value="monthly_cost">Monthly Cost</option>
+            <option value="balance">Balance</option>
             <option value="api_calls">API Calls</option>
             <option value="credits_used">Credits Used</option>
             <option value="tokens_used">Tokens Used</option>
@@ -99,7 +100,7 @@ export function ManualCostEntry({ onSuccess, onCancel }: ManualCostEntryProps) {
         </div>
 
         <div>
-          <label className="block text-sm text-muted-fg mb-1">Amount ($)</label>
+          <label className="block text-sm text-muted-fg mb-1">{metric === 'balance' ? 'Current Balance ($)' : 'Amount ($)'}</label>
           <input
             type="number"
             step="0.01"

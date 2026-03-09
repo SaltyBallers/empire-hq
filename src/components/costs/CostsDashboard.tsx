@@ -16,6 +16,10 @@ export function CostsDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showManualEntry, setShowManualEntry] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const [latestEntries, setLatestEntries] = useState<Record<string, AdminApiCost>>({})
 
   const fetchCosts = useCallback(async () => {
     try {
@@ -24,15 +28,33 @@ export function CostsDashboard() {
       const now = new Date()
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
       
-      const { data, error: fetchError } = await supabase
-        .from('admin_api_costs')
-        .select('*')
-        .gte('date', startOfLastMonth)
-        .order('date', { ascending: true })
+      const [costsResult, latestResult] = await Promise.all([
+        supabase
+          .from('admin_api_costs')
+          .select('*')
+          .gte('date', startOfLastMonth)
+          .order('date', { ascending: true }),
+        // Fetch ALL entries (not just this/last month) to find true latest per provider
+        supabase
+          .from('admin_api_costs')
+          .select('*')
+          .eq('app', 'empire')
+          .order('created_at', { ascending: false })
+          .limit(200)
+      ])
       
-      if (fetchError) throw fetchError
+      if (costsResult.error) throw costsResult.error
       
-      setCosts(data || [])
+      setCosts(costsResult.data || [])
+
+      // Build latest entry per provider
+      const latest: Record<string, AdminApiCost> = {}
+      for (const entry of (latestResult.data || [])) {
+        if (!latest[entry.provider]) {
+          latest[entry.provider] = entry
+        }
+      }
+      setLatestEntries(latest)
     } catch (err) {
       console.error('Error fetching costs:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch costs')
@@ -44,6 +66,35 @@ export function CostsDashboard() {
   useEffect(() => {
     fetchCosts()
   }, [fetchCosts])
+
+  const handleSync = async () => {
+    try {
+      setSyncing(true)
+      setSyncMessage(null)
+      const res = await fetch('/api/costs/trigger-sync', { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `Sync failed (${res.status})`)
+      }
+      const data = await res.json()
+      const results = data.results as { provider: string; status: string; error?: string }[]
+      const ok = results.filter(r => r.status === 'ok').map(r => r.provider)
+      const skipped = results.filter(r => r.status === 'skipped').map(r => r.provider)
+      const failed = results.filter(r => r.status === 'error')
+      
+      const parts: string[] = []
+      if (ok.length) parts.push(`✅ Synced: ${ok.join(', ')}`)
+      if (skipped.length) parts.push(`⏭️ Skipped: ${skipped.join(', ')}`)
+      if (failed.length) parts.push(`❌ Failed: ${failed.map(f => `${f.provider} (${f.error})`).join(', ')}`)
+      
+      setSyncMessage({ type: failed.length && !ok.length ? 'error' : 'success', text: parts.join(' · ') })
+      await fetchCosts()
+    } catch (err) {
+      setSyncMessage({ type: 'error', text: err instanceof Error ? err.message : 'Sync failed' })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   // Get unique providers that have data
   const activeProviders = useMemo(() => {
@@ -145,8 +196,26 @@ export function CostsDashboard() {
         </div>
       )}
       
+      {/* Sync result banner */}
+      {syncMessage && (
+        <div className={`${syncMessage.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'} border px-4 py-3 rounded-lg flex items-center justify-between`}>
+          <span className="text-sm">{syncMessage.text}</span>
+          <button onClick={() => setSyncMessage(null)} className="text-current hover:opacity-70 ml-3">✕</button>
+        </div>
+      )}
+
       {/* Action bar */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+        >
+          <svg className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {syncing ? 'Syncing...' : 'Sync Now'}
+        </button>
         <button
           onClick={() => setShowManualEntry(!showManualEntry)}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -174,6 +243,7 @@ export function CostsDashboard() {
               key={stats.provider} 
               stats={stats} 
               budget={MONTHLY_BUDGETS[stats.provider] || 100}
+              latestEntry={latestEntries[stats.provider]}
             />
           ))}
         </div>

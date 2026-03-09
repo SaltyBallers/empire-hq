@@ -59,16 +59,16 @@ export const MONTHLY_BUDGETS: Record<string, number> = {
 }
 
 // Provider display config
-export const PROVIDER_CONFIG: Record<string, { label: string; color: string; hasApi: boolean }> = {
-  anthropic: { label: 'Anthropic', color: '#d97706', hasApi: true },
-  openai: { label: 'OpenAI', color: '#10b981', hasApi: true },
-  brave: { label: 'Brave', color: '#ef4444', hasApi: false },
-  exa: { label: 'Exa', color: '#6366f1', hasApi: false },
-  perplexity: { label: 'Perplexity', color: '#06b6d4', hasApi: false },
-  moonshot: { label: 'Kimi/Moonshot', color: '#ec4899', hasApi: false },
-  gemini: { label: 'Gemini', color: '#3b82f6', hasApi: false },
-  lovable: { label: 'Lovable', color: '#f43f5e', hasApi: false },
-  vercel: { label: 'Vercel', color: '#8b5cf6', hasApi: true },
-  supabase: { label: 'Supabase', color: '#f59e0b', hasApi: true },
-  apify: { label: 'Apify', color: '#0ea5e9', hasApi: true }
+export const PROVIDER_CONFIG: Record<string, { label: string; color: string; hasApi: boolean; dashboardUrl: string }> = {
+  anthropic: { label: 'Anthropic', color: '#d97706', hasApi: true, dashboardUrl: 'https://console.anthropic.com/settings/billing' },
+  openai: { label: 'OpenAI', color: '#10b981', hasApi: true, dashboardUrl: 'https://platform.openai.com/usage' },
+  brave: { label: 'Brave', color: '#ef4444', hasApi: false, dashboardUrl: 'https://api-dashboard.search.brave.com' },
+  exa: { label: 'Exa', color: '#6366f1', hasApi: false, dashboardUrl: 'https://dashboard.exa.ai' },
+  perplexity: { label: 'Perplexity', color: '#06b6d4', hasApi: false, dashboardUrl: 'https://perplexity.ai/settings' },
+  moonshot: { label: 'Kimi/Moonshot', color: '#ec4899', hasApi: false, dashboardUrl: 'https://platform.moonshot.ai/console' },
+  gemini: { label: 'Gemini', color: '#3b82f6', hasApi: false, dashboardUrl: 'https://aistudio.google.com' },
+  lovable: { label: 'Lovable', color: '#f43f5e', hasApi: false, dashboardUrl: 'https://lovable.dev' },
+  vercel: { label: 'Vercel', color: '#8b5cf6', hasApi: true, dashboardUrl: 'https://vercel.com/bill-devlins-projects/~/usage' },
+  supabase: { label: 'Supabase', color: '#f59e0b', hasApi: true, dashboardUrl: 'https://supabase.com/dashboard' },
+  apify: { label: 'Apify', color: '#0ea5e9', hasApi: true, dashboardUrl: 'https://console.apify.com/billing' }
 }
