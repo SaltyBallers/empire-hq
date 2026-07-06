@@ -46,10 +46,12 @@ function sanitizeMoonshotMetadata(body: Record<string, unknown>): Record<string,
   }
 }
 
-function sanitizeVercelMetadata(charges: { BilledCost?: number }[], period: { from: string; to: string }): Record<string, unknown> {
-  const total = charges.reduce((sum, c) => sum + (c.BilledCost ?? 0), 0)
+function sanitizeVercelMetadata(charges: { BilledCost?: number; EffectiveCost?: number }[], period: { from: string; to: string }): Record<string, unknown> {
+  const effective = charges.reduce((sum, c) => sum + (c.EffectiveCost ?? 0), 0)
+  const billed = charges.reduce((sum, c) => sum + (c.BilledCost ?? 0), 0)
   return {
-    total_charges: total,
+    total_charges: effective,
+    billed_cost: billed,
     line_count: charges.length,
     period,
   }
@@ -190,7 +192,7 @@ export async function syncVercel(supabase: SupabaseAdmin): Promise<SyncResult> {
   )
   if (!res.ok) throw new Error(`Vercel API ${res.status}: ${await res.text()}`)
 
-  let charges: { BilledCost?: number }[] = []
+  let charges: { BilledCost?: number; EffectiveCost?: number }[] = []
   try {
     const text = await res.text()
     const lines = text.trim().split('\n').filter(Boolean)
@@ -199,8 +201,9 @@ export async function syncVercel(supabase: SupabaseAdmin): Promise<SyncResult> {
     throw new Error(`Vercel API response parse failed: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`)
   }
 
+  // EffectiveCost = true amortized spend (Pro seat + usage); BilledCost is only overage above plan (often $0).
   const total = charges.reduce(
-    (sum: number, c: { BilledCost?: number }) => sum + (c.BilledCost ?? 0),
+    (sum: number, c: { EffectiveCost?: number }) => sum + (c.EffectiveCost ?? 0),
     0
   )
 
