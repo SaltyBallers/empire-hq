@@ -33,7 +33,12 @@ export async function POST(_request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (user.email !== process.env.ADMIN_EMAIL) {
+  // Allow any email listed in ADMIN_EMAILS (comma-separated) or the legacy ADMIN_EMAIL
+  const adminEmails = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? '')
+    .split(',')
+    .map(e => e.trim())
+    .filter(Boolean)
+  if (!adminEmails.includes(user.email ?? '')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

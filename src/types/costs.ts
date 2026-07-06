@@ -1,6 +1,7 @@
 export const ALL_PROVIDERS = [
   'anthropic', 'openai', 'brave', 'exa', 'perplexity',
-  'moonshot', 'gemini', 'lovable', 'vercel', 'supabase', 'apify'
+  'moonshot', 'gemini', 'lovable', 'vercel', 'supabase', 'apify',
+  'twilio', 'fly', 'axiom'
 ] as const
 
 export type Provider = typeof ALL_PROVIDERS[number]
@@ -55,7 +56,10 @@ export const MONTHLY_BUDGETS: Record<string, number> = {
   lovable: 50,
   vercel: 50,
   supabase: 75,
-  apify: 100
+  apify: 100,
+  twilio: 100,
+  fly: 50,
+  axiom: 30,
 }
 
 // Provider display config
@@ -69,6 +73,19 @@ export const PROVIDER_CONFIG: Record<string, { label: string; color: string; has
   gemini: { label: 'Gemini', color: '#3b82f6', hasApi: false, dashboardUrl: 'https://aistudio.google.com' },
   lovable: { label: 'Lovable', color: '#f43f5e', hasApi: false, dashboardUrl: 'https://lovable.dev' },
   vercel: { label: 'Vercel', color: '#8b5cf6', hasApi: true, dashboardUrl: 'https://vercel.com/bill-devlins-projects/~/usage' },
-  supabase: { label: 'Supabase', color: '#f59e0b', hasApi: true, dashboardUrl: 'https://supabase.com/dashboard' },
-  apify: { label: 'Apify', color: '#0ea5e9', hasApi: true, dashboardUrl: 'https://console.apify.com/billing' }
+  supabase: { label: 'Supabase', color: '#f59e0b', hasApi: false, dashboardUrl: 'https://supabase.com/dashboard' },
+  apify: { label: 'Apify', color: '#0ea5e9', hasApi: true, dashboardUrl: 'https://console.apify.com/billing' },
+  twilio: { label: 'Twilio', color: '#e44f44', hasApi: true, dashboardUrl: 'https://console.twilio.com/us1/billing/billing' },
+  fly: { label: 'Fly.io', color: '#7c3aed', hasApi: false, dashboardUrl: 'https://fly.io/dashboard/billing' },
+  axiom: { label: 'Axiom', color: '#0891b2', hasApi: false, dashboardUrl: 'https://app.axiom.co/settings/billing' },
+}
+
+// Voice cost row from the voice_cost_monthly_by_account view (626a)
+export interface VoiceCostRow {
+  ghl_location_id: string
+  month: string
+  call_count: number
+  total_minutes: number
+  total_estimated_cost_usd: number
+  blended_cost_per_min: number | null
 }

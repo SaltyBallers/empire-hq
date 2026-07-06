@@ -8,6 +8,7 @@ import { CostSummaryCards } from './CostSummaryCards'
 import { MonthlyChart } from './MonthlyChart'
 import { ProviderDetailCard } from './ProviderDetailCard'
 import { ManualCostEntry } from './ManualCostEntry'
+import { VoiceCostView } from './VoiceCostView'
 
 const supabase = createClient()
 
@@ -239,15 +240,17 @@ export function CostsDashboard() {
         <h2 className="text-xl font-semibold text-foreground mb-4">Provider Breakdown</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {providerStats.map(stats => (
-            <ProviderDetailCard 
-              key={stats.provider} 
-              stats={stats} 
+            <ProviderDetailCard
+              key={stats.provider}
+              stats={stats}
               budget={MONTHLY_BUDGETS[stats.provider] || 100}
               latestEntry={latestEntries[stats.provider]}
             />
           ))}
         </div>
       </div>
+
+      <VoiceCostView />
     </div>
   )
 }
