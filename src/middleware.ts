@@ -28,8 +28,8 @@ export async function middleware(request: NextRequest) {
       return Response.redirect(redirectUrl)
     }
 
-    // Authorization: only allowed emails can access admin dashboard
-    const ALLOWED_EMAILS = ['surfballers@gmail.com']
+    // Authorization: only GetLeveredUp workspace accounts can access
+    const ALLOWED_EMAILS = ['billd@getleveredup.com', 'erics@getleveredup.com']
     if (user && !ALLOWED_EMAILS.includes(user.email ?? '')) {
       // Sign them out and redirect to login with error
       await supabase.auth.signOut()
