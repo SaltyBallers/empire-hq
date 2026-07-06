@@ -181,9 +181,11 @@ export async function syncVercel(supabase: SupabaseAdmin): Promise<SyncResult> {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const endAt = now.toISOString()
+  // Team-owned billing data requires teamId (Vercel REST API). empire-hq lives under the bill-devlins-projects team.
+  const teamId = process.env.VERCEL_TEAM_ID ?? 'team_RDOGdp3jwRA4BKolgJm1avkO'
 
   const res = await fetch(
-    `https://api.vercel.com/v1/billing/charges?from=${monthStart}&to=${endAt}`,
+    `https://api.vercel.com/v1/billing/charges?teamId=${teamId}&from=${monthStart}&to=${endAt}`,
     { headers: { Authorization: `Bearer ${token}` } }
   )
   if (!res.ok) throw new Error(`Vercel API ${res.status}: ${await res.text()}`)
