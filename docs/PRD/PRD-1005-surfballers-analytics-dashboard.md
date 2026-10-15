@@ -9,7 +9,7 @@ branch_name: feature/1005-surfballers-analytics-dashboard
 epic: 1000
 created_at: 2026-10-15T00:00:00Z
 updated_at: 2026-10-15T00:00:00Z
-prd_status: in_progress
+prd_status: done
 card_budget:
   estimated_files: 9
   surface: frontend
