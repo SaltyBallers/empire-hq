@@ -146,7 +146,7 @@ describe('POST /api/costs/sync', () => {
     expect(metadata).not.toHaveProperty('internal_id')
   })
 
-  it('skips anthropic when key not set', async () => {
+  it('does not include anthropic (removed 2026-10-15 — unused provider)', async () => {
     defaultFetchMock()
 
     const { POST } = await import('../route')
@@ -154,7 +154,7 @@ describe('POST /api/costs/sync', () => {
     const body = await res.json()
 
     const anthropic = body.results.find((r: { provider: string }) => r.provider === 'anthropic')
-    expect(anthropic.status).toBe('skipped')
+    expect(anthropic).toBeUndefined()
   })
 
   it('skips openai when OPENAI_ADMIN_API_KEY not set', async () => {
@@ -303,7 +303,7 @@ describe('POST /api/costs/sync', () => {
     expect(failed.error).toContain('DB write failed')
   })
 
-  it('returns results for all 8 synced providers', async () => {
+  it('returns results for all 7 synced providers', async () => {
     defaultFetchMock()
 
     const { POST } = await import('../route')
@@ -313,7 +313,7 @@ describe('POST /api/costs/sync', () => {
     const providers = body.results.map((r: { provider: string }) => r.provider)
     expect(providers).toContain('moonshot')
     expect(providers).toContain('vercel')
-    expect(providers).toContain('anthropic')
+    expect(providers).not.toContain('anthropic')
     expect(providers).toContain('openai')
     expect(providers).toContain('twilio')
     expect(providers).toContain('fly')

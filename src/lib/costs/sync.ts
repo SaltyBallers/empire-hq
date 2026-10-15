@@ -373,8 +373,9 @@ export async function syncAllProviders(supabase: SupabaseAdmin): Promise<SyncRes
     // Type-B: usage-metered via API (existing)
     { name: 'moonshot', fn: () => syncMoonshot(supabase) },
     { name: 'vercel', fn: () => syncVercel(supabase) },
-    { name: 'anthropic', fn: () => syncAnthropic(supabase) },
     // Type-B: usage-metered via API (new)
+    // NOTE: Anthropic removed 2026-10-15 — not used for API calls, no admin key provisioned.
+    //   syncAnthropic() is retained below (unused) in case Anthropic usage resumes.
     { name: 'openai', fn: () => syncOpenAI(supabase) },
     { name: 'twilio', fn: () => syncTwilio(supabase) },
     // Type-A: fixed recurring subscription (new)
