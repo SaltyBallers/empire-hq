@@ -9,8 +9,9 @@ const mockGte = vi.fn()
 const mockOrder = vi.fn()
 const mockLimit = vi.fn()
 const mockRange = vi.fn()
+const mockIn = vi.fn()
 
-function makeChainable(terminal: () => unknown) {
+function makeChainable(terminal: () => unknown, sampleTerminal: () => unknown) {
   const chain: Record<string, unknown> = {}
   chain.select = () => chain
   chain.eq = (..._args: unknown[]) => { mockEq(..._args); return chain }
@@ -18,16 +19,23 @@ function makeChainable(terminal: () => unknown) {
   chain.order = (..._args: unknown[]) => { mockOrder(..._args); return chain }
   chain.limit = (..._args: unknown[]) => { mockLimit(..._args); return terminal() }
   chain.range = (..._args: unknown[]) => { mockRange(..._args); return terminal() }
+  // The intent sample drill-down query terminates on `.in('id', ids)`.
+  chain.in = (..._args: unknown[]) => { mockIn(..._args); return sampleTerminal() }
   return chain
 }
 
 let tableFixtures: Record<string, unknown[]> = {}
+// Served by the `.in('id', ...)` sample drill-down query against assistant_events.
+let sampleEventFixtures: unknown[] = []
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     from: (table: string) => {
       mockSelect(table)
-      return makeChainable(() => ({ data: tableFixtures[table] ?? [], error: null }))
+      return makeChainable(
+        () => ({ data: tableFixtures[table] ?? [], error: null }),
+        () => ({ data: sampleEventFixtures, error: null }),
+      )
     },
   }),
 }))
@@ -44,6 +52,7 @@ describe('GET /api/surfballers/analytics', () => {
     vi.clearAllMocks()
     vi.resetModules()
     tableFixtures = {}
+    sampleEventFixtures = []
     process.env.SURFBALLERS_SUPABASE_URL = 'https://test.supabase.co'
     process.env.SURFBALLERS_SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
   })
@@ -138,6 +147,55 @@ describe('GET /api/surfballers/analytics', () => {
     expect(lineup).toBeDefined()
     expect(lineup.count).toBe(2)
     expect(body.intents.totalClassified).toBe(3)
+  })
+
+  it('surfaces per-label sample prompts via the assistant_events join (truncated prompt + hashed user only)', async () => {
+    // 4 lineup-advice classifications → only the first 3 event_ids become samples.
+    tableFixtures['intent_classification'] = [
+      { id: 'c1', event_id: 'e1', label: 'lineup-advice', confidence: 0.9, model: 'gpt-4', classified_at: '2026-09-18T10:00:00Z' },
+      { id: 'c2', event_id: 'e2', label: 'lineup-advice', confidence: 0.9, model: 'gpt-4', classified_at: '2026-09-17T10:00:00Z' },
+      { id: 'c3', event_id: 'e3', label: 'lineup-advice', confidence: 0.9, model: 'gpt-4', classified_at: '2026-09-16T10:00:00Z' },
+      { id: 'c4', event_id: 'e4', label: 'lineup-advice', confidence: 0.9, model: 'gpt-4', classified_at: '2026-09-15T10:00:00Z' },
+      { id: 'c5', event_id: 'e5', label: 'waiver-research', confidence: 0.85, model: 'gpt-4', classified_at: '2026-09-14T10:00:00Z' },
+    ]
+    // assistant_events rows served by the `.in('id', ...)` sample query.
+    // Includes a full prompt + response fields that MUST NOT leak into samples.
+    sampleEventFixtures = [
+      { id: 'e1', prompt_truncated: 'who should I start at FLEX', user_id: 'hash_aaaaaaaaaaaaaa', prompt: 'FULL PROMPT LEAK', response_truncated: 'RESPONSE LEAK' },
+      { id: 'e2', prompt_truncated: 'is my RB a good start', user_id: 'hash_bbbbbbbbbbbbbb' },
+      { id: 'e3', prompt_truncated: 'bench or start my TE', user_id: 'hash_cccccccccccccc' },
+      { id: 'e5', prompt_truncated: 'best waiver pickup QB', user_id: 'hash_dddddddddddddd' },
+    ]
+
+    const { GET } = await import('../route')
+    const res = await GET(makeRequest())
+    const body = await res.json()
+
+    const lineup = body.intents.byLabel.find((l: { label: string }) => l.label === 'lineup-advice')
+    expect(lineup).toBeDefined()
+    expect(lineup.count).toBe(4)
+    // Capped at 3 samples per label.
+    expect(lineup.samples).toHaveLength(3)
+    // Only prompt_truncated + user_id present per sample — no other fields.
+    for (const s of lineup.samples) {
+      expect(Object.keys(s).sort()).toEqual(['prompt_truncated', 'user_id'])
+    }
+    // The samples use the first 3 event_ids seen (e1, e2, e3), not e4.
+    expect(lineup.samples.map((s: { prompt_truncated: string }) => s.prompt_truncated)).toEqual([
+      'who should I start at FLEX',
+      'is my RB a good start',
+      'bench or start my TE',
+    ])
+
+    const waiver = body.intents.byLabel.find((l: { label: string }) => l.label === 'waiver-research')
+    expect(waiver.samples).toHaveLength(1)
+    expect(waiver.samples[0].prompt_truncated).toBe('best waiver pickup QB')
+
+    // PII discipline: no full prompt, no response text leaks anywhere in intents.
+    const intentsStr = JSON.stringify(body.intents)
+    expect(intentsStr).not.toContain('FULL PROMPT LEAK')
+    expect(intentsStr).not.toContain('RESPONSE LEAK')
+    expect(intentsStr).not.toContain('response_truncated')
   })
 
   it('range param is echoed in meta', async () => {

@@ -209,12 +209,52 @@ export async function GET(request: NextRequest) {
   }
 
   // --- Aggregate: Intents ---
+  const SAMPLES_PER_LABEL = 3
+  const intentClassifications = (intentRows.data as IntentRow[] ?? [])
+
   const intentCounts = new Map<string, number>()
-  for (const row of (intentRows.data as IntentRow[] ?? [])) {
+  // Collect up to SAMPLES_PER_LABEL event_ids per label, deterministically:
+  // intentClassifications are ordered classified_at DESC, so take the first N seen.
+  const eventIdsByLabel = new Map<string, string[]>()
+  for (const row of intentClassifications) {
     intentCounts.set(row.label, (intentCounts.get(row.label) ?? 0) + 1)
+    const ids = eventIdsByLabel.get(row.label) ?? []
+    if (ids.length < SAMPLES_PER_LABEL && row.event_id) {
+      ids.push(row.event_id)
+      eventIdsByLabel.set(row.label, ids)
+    }
   }
+
+  // Bounded, de-duplicated list of event_ids we actually need (≤ 3 per label).
+  const neededEventIds = Array.from(
+    new Set(Array.from(eventIdsByLabel.values()).flat())
+  )
+
+  // One additional query to pull truncated prompt + hashed user_id for samples.
+  // Only prompt_truncated + opaque hashed user_id leave this route — no full prompt, no other PII.
+  const sampleEventMap = new Map<string, { prompt_truncated: string | null; user_id: string }>()
+  if (neededEventIds.length > 0) {
+    const sampleEvents = await supabase
+      .from('assistant_events')
+      .select('id,prompt_truncated,user_id')
+      .in('id', neededEventIds)
+    for (const ev of (sampleEvents.data ?? []) as { id: string; prompt_truncated: string | null; user_id: string }[]) {
+      sampleEventMap.set(ev.id, { prompt_truncated: ev.prompt_truncated, user_id: ev.user_id })
+    }
+  }
+
   const byLabel = Array.from(intentCounts.entries())
-    .map(([label, count]) => ({ label, count }))
+    .map(([label, count]) => {
+      const samples: { prompt_truncated: string; user_id: string }[] = []
+      for (const eid of (eventIdsByLabel.get(label) ?? [])) {
+        const ev = sampleEventMap.get(eid)
+        // Skip if prompt_truncated is null; pass user_id (opaque hash) through as-is.
+        if (ev && ev.prompt_truncated != null) {
+          samples.push({ prompt_truncated: ev.prompt_truncated, user_id: ev.user_id })
+        }
+      }
+      return { label, count, samples }
+    })
     .sort((a, b) => b.count - a.count)
 
   const intents = {

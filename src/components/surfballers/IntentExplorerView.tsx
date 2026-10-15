@@ -5,6 +5,7 @@ import { useState } from 'react'
 interface IntentLabel {
   label: string
   count: number
+  samples?: { prompt_truncated: string; user_id: string }[]
 }
 
 interface IntentData {
@@ -89,8 +90,19 @@ export function IntentExplorerView({ data }: IntentExplorerViewProps) {
 
                   {isOpen && (
                     <div className="mt-2 ml-4 p-3 bg-background border border-border rounded-md text-xs text-muted-fg">
-                      <p className="font-medium text-foreground mb-1">Sample prompts for <span className="text-[#00A8E8]">{item.label}</span></p>
-                      <p className="italic">Sample prompts load from the raw events view — filter by intent label there to see full context.</p>
+                      <p className="font-medium text-foreground mb-2">Sample prompts for <span className="text-[#00A8E8]">{item.label}</span></p>
+                      {!item.samples || item.samples.length === 0 ? (
+                        <p className="italic">No sample prompts available for this label.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {item.samples.map((sample, i) => (
+                            <div key={i} className="space-y-0.5">
+                              <p className="italic">{sample.prompt_truncated}</p>
+                              <span className="text-[10px] text-muted-fg/60 font-mono">{sample.user_id.slice(0, 12)}…</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
