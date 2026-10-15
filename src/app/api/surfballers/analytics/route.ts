@@ -10,7 +10,7 @@ interface UnitEconomicsRow {
   key: string
   window_start: string
   window_end: string
-  token_cost: number
+  openai_cost: number
   infra_cost: number
   total_cost: number
 }
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
   const [userRollup, leagueRollup, callRollup, toolEvents, intentRows, rawPage] = await Promise.all([
     supabase
       .from('assistant_cost_rollup')
-      .select('grain,key,window_start,window_end,token_cost,infra_cost,total_cost')
+      .select('grain,key,window_start,window_end,openai_cost,infra_cost,total_cost')
       .eq('grain', 'user')
       .gte('window_start', windowStart)
       .order('window_start', { ascending: false })
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
 
     supabase
       .from('assistant_cost_rollup')
-      .select('grain,key,window_start,window_end,token_cost,infra_cost,total_cost')
+      .select('grain,key,window_start,window_end,openai_cost,infra_cost,total_cost')
       .eq('grain', 'league')
       .gte('window_start', windowStart)
       .order('window_start', { ascending: false })
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
 
     supabase
       .from('assistant_cost_rollup')
-      .select('grain,key,window_start,window_end,token_cost,infra_cost,total_cost')
+      .select('grain,key,window_start,window_end,openai_cost,infra_cost,total_cost')
       .eq('grain', 'call')
       .gte('window_start', windowStart)
       .order('window_start', { ascending: false })
