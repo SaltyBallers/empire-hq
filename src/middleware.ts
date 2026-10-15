@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Authorization: only GetLeveredUp workspace accounts can access
-    const ALLOWED_EMAILS = ['billd@getleveredup.com', 'erics@getleveredup.com']
+    const ALLOWED_EMAILS = ['billd@getleveredup.com', 'erics@getleveredup.com', 'surfballers@gmail.com']
     if (user && !ALLOWED_EMAILS.includes(user.email ?? '')) {
       // Sign them out and redirect to login with error
       await supabase.auth.signOut()
